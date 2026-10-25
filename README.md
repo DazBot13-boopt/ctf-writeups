@@ -19,6 +19,7 @@ soumis à la plateforme et ne figurent pas ici.
 
 ## OT / ICS
 - [OT#001 — Water Treatment](ot/ot001.md) — abus de registres Modbus/TCP
+- [OT#003 — Furnace Portal](ot/ot003-furnace-portal.md) — credential leak + SSRF filter bypass (case-sensitivity, IP encoding) + vessel rupture
 - [OT#004 — Chemical Reactor](ot/ot004-chemical-reactor.md) — bypass du SIS via session partagée (protocole OPC-UA-style custom)
 
 ## Vuln Research
@@ -30,5 +31,5 @@ soumis à la plateforme et ne figurent pas ici.
 ---
 
 ### Non inclus (pas de write-up disponible)
-Résolus sur la plateforme mais sans write-up exploitable : **OT#002, OT#003, PWN#Delta**.
+Résolus sur la plateforme mais sans write-up exploitable : **OT#002, PWN#Delta**.
 Les challenges « out context » (0byte, Discord, Know Your Enemy, Operation BLACKHOLE 1→8) ne sont pas documentés ici.
