@@ -22,11 +22,12 @@ soumis à la plateforme et ne figurent pas ici.
 
 ## Vuln Research
 - [VULN#001 — metadata service](vuln-research/vuln001-libexif.md) — libexif, OOB read MakerNote
+- [VULN#002 — DHCPv6 relay](vuln-research/vuln002-dnsmasq.md) — dnsmasq, heap-buffer-overflow read in DHCPv6 relay
 - [VULN#003 — DNS inspection](vuln-research/vuln003-cares.md) — c-ares, OOB read parseur CAA
 - [VULN#005 — Acme Gateway](vuln-research/vuln005-goahead.md) — GoAhead, BF1 Basic-Auth bypass + leak config
 
 ---
 
 ### Non inclus (pas de write-up disponible)
-Résolus sur la plateforme mais sans write-up exploitable : **OT#002, OT#003, PWN#006, PWN#Delta, VULN#002**.
+Résolus sur la plateforme mais sans write-up exploitable : **OT#002, OT#003, PWN#006, PWN#Delta**.
 Les challenges « out context » (0byte, Discord, Know Your Enemy, Operation BLACKHOLE 1→8) ne sont pas documentés ici.
