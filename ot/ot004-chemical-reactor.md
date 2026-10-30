@@ -2,7 +2,7 @@
 
 ## Cible
 - Page : https://otctf.pages.dev/ot-004-chemical-reactor/
-- Service : `169.58.126.107:6003`
+- Service : `<HOST>:<PORT>`
 - Catégorie : OT
 - Objectif : neutraliser le Safety Instrumented System (SIS), qui partage le **même
   address space / même session** que le process controller, puis pousser le réacteur

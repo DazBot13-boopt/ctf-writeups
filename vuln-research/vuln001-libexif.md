@@ -1,4 +1,4 @@
-# VULN#001 — metadata service (libexif, 169.58.126.107:7027)
+# VULN#001 — metadata service (libexif, <HOST>:<PORT>)
 
 ## Status
 

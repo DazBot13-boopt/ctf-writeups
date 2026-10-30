@@ -1,6 +1,6 @@
 # VULN#003 — DNS response inspection service (c-ares, OOB read CAA)
 
-> Challenge bugpwn `169.58.126.107:7028`, catégorie Vuln Research, 82 pts.
+> Challenge bugpwn `<HOST>:<PORT>`, catégorie Vuln Research, 82 pts.
 > Analyse récupérée depuis 13.63.167.233:/home/ubuntu/CtfAndHacking/knowledge/pwn.md
 
 ## c-ares — audit d'un snapshot git et validation sur service DNS (OOB read CAA)

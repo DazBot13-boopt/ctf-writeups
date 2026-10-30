@@ -7,6 +7,7 @@ soumis à la plateforme et ne figurent pas ici.
 ## Web
 - [SwiftNotes](web/swiftnotes.md) — prototype pollution → RCE EJS
 - [WireVault](web/wirevault.md) — timing d'auth + fuite de cache / race condition
+- [TicketVault](web/ticketvault.md) — injection de filtre NoSQL → broken access control (IDOR)
 
 ## Pwn
 - [PWN#001](pwn/pwn001.md) — stack overflow, canary leak, ret2libc (x86-64)
@@ -15,11 +16,13 @@ soumis à la plateforme et ne figurent pas ici.
 - [PWN#004 — Pets](pwn/pwn004-pets.md) — C++ vtable whitelist / heap
 - [PWN#005 — Document Store](pwn/pwn005.md) — blind pwn, dump PIE/libc → ORW
 - [PWN#006 — QuickJS](pwn/pwn006-quickjs.md) — TypedArray OOB bounds-check bypass → arbitrary read → environ leak
+- [PWN#Delta — Vault PPC](pwn/pwn-delta.md) — off-by-one canary leak + stwu back-chain ROP (PowerPC32)
 - [PWN#Alpha / PWN#Beta — Vault](pwn/vault-alpha-beta.md) — canary leak + ROP (ARM/Thumb & MIPS)
 - [PWN#Epsilon — Vault RISC-V 64](pwn/pwn-epsilon.md) — canary leak + ROP syscall `execve` (`c.ldsp`/`addi16sp`)
 
 ## OT / ICS
 - [OT#001 — Water Treatment](ot/ot001.md) — abus de registres Modbus/TCP
+- [OT#002 — Breaker 52](ot/ot002-breaker52.md) — protocole binaire custom, attaque Aurora (fermeture hors synchronisme)
 - [OT#003 — Furnace Portal](ot/ot003-furnace-portal.md) — credential leak + SSRF filter bypass (case-sensitivity, IP encoding) + vessel rupture
 - [OT#004 — Chemical Reactor](ot/ot004-chemical-reactor.md) — bypass du SIS via session partagée (protocole OPC-UA-style custom)
 
@@ -27,10 +30,10 @@ soumis à la plateforme et ne figurent pas ici.
 - [VULN#001 — metadata service](vuln-research/vuln001-libexif.md) — libexif, OOB read MakerNote
 - [VULN#002 — DHCPv6 relay](vuln-research/vuln002-dnsmasq.md) — dnsmasq, heap-buffer-overflow read in DHCPv6 relay
 - [VULN#003 — DNS inspection](vuln-research/vuln003-cares.md) — c-ares, OOB read parseur CAA
+- [VULN#004 — Ghost-Pixel](vuln-research/vuln004-ghostpixel.md) — giflib 5.2.2, double-free in decode cleanup
 - [VULN#005 — Acme Gateway](vuln-research/vuln005-goahead.md) — GoAhead, BF1 Basic-Auth bypass + leak config
 
 ---
 
 ### Non inclus (pas de write-up disponible)
-Résolus sur la plateforme mais sans write-up exploitable : **OT#002, PWN#Delta**.
 Les challenges « out context » (0byte, Discord, Know Your Enemy, Operation BLACKHOLE 1→8) ne sont pas documentés ici.

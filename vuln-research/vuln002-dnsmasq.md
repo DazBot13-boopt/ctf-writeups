@@ -45,7 +45,7 @@ existe encore dans la version corrigée ; ce n'est donc pas le bug visé.
 
 ## Service
 
-- TCP 169.58.126.107:7026
+- TCP <HOST>:<PORT>
 - framing : longueur 4 octets big-endian, puis paquet DHCPv6 brut
 - validation : type 1..14, longueur max **4096** (au-delà : `bad length`)
 - le paquet est passé à dnsmasq compilé avec ASAN ; le buffer fait exactement
@@ -83,6 +83,6 @@ Version corrigée : aucun crash.
 ## Résultat
 
     status: confirmed
-    FLAG: CTF{67f6cb9066aec0b416ebcd43b6eed73c}
+    FLAG: CTF{REDACTED}
 
 Flag acceptée par la plateforme (`Correct`).

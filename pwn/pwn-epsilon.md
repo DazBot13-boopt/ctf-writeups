@@ -7,7 +7,7 @@ Le vrai flag n'est pas conservé dans le dépôt.
 
 ## Cible
 
-- Service : `169.58.126.107:5003` (TCP).
+- Service : `<HOST>:<PORT>` (TCP).
 - Architecture : **RISC-V 64, little-endian**, binaire **non-PIE** (gadgets à adresses fixes).
 - Le binaire n'était pas fourni localement : l'analyse et la validation ont été faites directement contre le service.
 - Prompt du programme : `Enter your name: ` puis `Leave a message for the vault keeper: `.

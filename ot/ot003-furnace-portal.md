@@ -1,7 +1,7 @@
 # OT#003 — Blast Furnace Remote Operations Portal
 
 **Challenge**: OT#003  
-**Remote**: `169.58.126.107:6002`  
+**Remote**: `<HOST>:<PORT>`  
 **Category**: Web / OT / SSRF  
 **Flag**: `CTF{REDACTED}`
 
