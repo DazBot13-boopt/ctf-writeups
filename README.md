@@ -16,6 +16,7 @@ soumis à la plateforme et ne figurent pas ici.
 - [PWN#005 — Document Store](pwn/pwn005.md) — blind pwn, dump PIE/libc → ORW
 - [PWN#006 — QuickJS](pwn/pwn006-quickjs.md) — TypedArray OOB bounds-check bypass → arbitrary read → environ leak
 - [PWN#Alpha / PWN#Beta — Vault](pwn/vault-alpha-beta.md) — canary leak + ROP (ARM/Thumb & MIPS)
+- [PWN#Epsilon — Vault RISC-V 64](pwn/pwn-epsilon.md) — canary leak + ROP syscall `execve` (`c.ldsp`/`addi16sp`)
 
 ## OT / ICS
 - [OT#001 — Water Treatment](ot/ot001.md) — abus de registres Modbus/TCP
