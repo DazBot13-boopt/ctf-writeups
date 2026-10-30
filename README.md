@@ -34,7 +34,8 @@ soumis à la plateforme et ne figurent pas ici.
 - [VULN#004 — Ghost-Pixel](vuln-research/vuln004-ghostpixel.md) — giflib 5.2.2, double-free in decode cleanup
 - [VULN#005 — Acme Gateway](vuln-research/vuln005-goahead.md) — GoAhead, BF1 Basic-Auth bypass + leak config
 
----
-
-### Non inclus (pas de write-up disponible)
-Les challenges « out context » (0byte, Discord, Know Your Enemy, Operation BLACKHOLE 1→8) ne sont pas documentés ici.
+## Out Context
+- [Operation BLACKHOLE 1→8](out-context/operation-blackhole.md) — analyse de pcap DDoS (8 questions sur `CTF1.pcapng`)
+- [0byte](out-context/0byte.md) — flag meta / trivia
+- [Discord](out-context/discord.md) — flag sur le serveur Discord officiel
+- [Know Your Enemy](out-context/know-your-enemy.md) — OSINT sur l'empreinte publique de BUG|PWN
