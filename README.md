@@ -8,6 +8,7 @@ soumis à la plateforme et ne figurent pas ici.
 - [SwiftNotes](web/swiftnotes.md) — prototype pollution → RCE EJS
 - [WireVault](web/wirevault.md) — timing d'auth + fuite de cache / race condition
 - [TicketVault](web/ticketvault.md) — injection de filtre NoSQL → broken access control (IDOR)
+- [ClearHouse](web/clearhouse.md) — IDOR GraphQL + path traversal + js-yaml v3 RCE via toJSON
 
 ## Pwn
 - [PWN#001](pwn/pwn001.md) — stack overflow, canary leak, ret2libc (x86-64)
