@@ -34,6 +34,7 @@ soumis à la plateforme et ne figurent pas ici.
 - [VULN#003 — DNS inspection](vuln-research/vuln003-cares.md) — c-ares, OOB read parseur CAA
 - [VULN#004 — Ghost-Pixel](vuln-research/vuln004-ghostpixel.md) — giflib 5.2.2, double-free in decode cleanup
 - [VULN#005 — Acme Gateway](vuln-research/vuln005-goahead.md) — GoAhead, BF1 Basic-Auth bypass + leak config
+- [VULN#006 — Font Inspector](vuln-research/vuln006-freetype-bdf.md) — FreeType, heap OOB read via table BDF embarquée
 
 ## Out Context
 - [Operation BLACKHOLE 1→8](out-context/operation-blackhole.md) — analyse de pcap DDoS (8 questions sur `CTF1.pcapng`)
