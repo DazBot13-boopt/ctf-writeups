@@ -35,6 +35,7 @@ soumis à la plateforme et ne figurent pas ici.
 - [VULN#004 — Ghost-Pixel](vuln-research/vuln004-ghostpixel.md) — giflib 5.2.2, double-free in decode cleanup
 - [VULN#005 — Acme Gateway](vuln-research/vuln005-goahead.md) — GoAhead, BF1 Basic-Auth bypass + leak config
 - [VULN#006 — Font Inspector](vuln-research/vuln006-freetype-bdf.md) — FreeType, heap OOB read via table BDF embarquée
+- [VULN#007 — Archive Inspector](vuln-research/vuln007-libarchive-7z.md) — libarchive 3.8.0, heap OOB read dans détection 7-Zip SFX/ELF
 
 ## Out Context
 - [Operation BLACKHOLE 1→8](out-context/operation-blackhole.md) — analyse de pcap DDoS (8 questions sur `CTF1.pcapng`)
