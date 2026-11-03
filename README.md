@@ -21,6 +21,7 @@ soumis à la plateforme et ne figurent pas ici.
 - [PWN#Delta — Vault PPC](pwn/pwn-delta.md) — off-by-one canary leak + stwu back-chain ROP (PowerPC32)
 - [PWN#Alpha / PWN#Beta — Vault](pwn/vault-alpha-beta.md) — canary leak + ROP (ARM/Thumb & MIPS)
 - [PWN#Epsilon — Vault RISC-V 64](pwn/pwn-epsilon.md) — canary leak + ROP syscall `execve` (`c.ldsp`/`addi16sp`)
+- [PWN#Zeta — Vault CHERI](pwn/pwn-zeta.md) — CHERI purecap logic bug, scratch credential escalation
 
 ## OT / ICS
 - [OT#001 — Water Treatment](ot/ot001.md) — abus de registres Modbus/TCP
