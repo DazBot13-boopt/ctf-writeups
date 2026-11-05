@@ -28,6 +28,7 @@ soumis à la plateforme et ne figurent pas ici.
 - [OT#002 — Breaker 52](ot/ot002-breaker52.md) — protocole binaire custom, attaque Aurora (fermeture hors synchronisme)
 - [OT#003 — Furnace Portal](ot/ot003-furnace-portal.md) — credential leak + SSRF filter bypass (case-sensitivity, IP encoding) + vessel rupture
 - [OT#004 — Chemical Reactor](ot/ot004-chemical-reactor.md) — bypass du SIS via session partagée (protocole OPC-UA-style custom)
+- [OT#007 — Centrifuge Resonance](ot/ot007-centrifuge-resonance.md) — bypass de l'interlock de vibration via un coil de maintenance override (Modbus TCP réel)
 
 ## Vuln Research
 - [VULN#001 — metadata service](vuln-research/vuln001-libexif.md) — libexif, OOB read MakerNote

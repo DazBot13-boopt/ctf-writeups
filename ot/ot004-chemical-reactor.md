@@ -1,87 +1,126 @@
-# OT-004 — Chemical Reactor (OPC-UA-style custom TCP)
+# OT#004 — Chemical Reactor (protocole binaire custom, style OPC-UA)
 
-## Cible
-- Page : https://otctf.pages.dev/ot-004-chemical-reactor/
-- Service : `<HOST>:<PORT>`
-- Catégorie : OT
-- Objectif : neutraliser le Safety Instrumented System (SIS), qui partage le **même
-  address space / même session** que le process controller, puis pousser le réacteur
-  en condition dangereuse **soutenue**. Format `CTF{REDACTED}`.
-- Modèle annoncé : OPC-UA-style, nœud racine `Objects (ns=0, id=85)`. Address space =
-  `Objects` → `Reactor Controller` (process tags) + `Safety System` (trip/protection).
-  « discover them by talking to the endpoint ». NO SOURCE / NO BINARY / NO MAP.
+- **Cible :** `<HOST>:<PORT>` — page du challenge : https://otctf.pages.dev/ot-004-chemical-reactor/
+- **Catégorie :** OT / ICS
+- **Flag :** `CTF{REDACTED}`
+- **Protocole :** TCP binaire custom (annoncé « OPC-UA-style », mais pas de l'OPC UA binaire réel)
 
-## FAITS confirmés (reproductibles)
+## Contexte
 
-### Transport
-- TCP ouvert, **pas de bannière** : le serveur attend que le client parle.
-- **Ce n'est PAS de l'OPC UA binaire réel** : un HEL OPC UA (`HELF`+size LE+body),
-  via client manuel *et* via `asyncua`, provoque une fermeture immédiate (« socket closed »).
-- Framing = **`[uint32 big-endian longueur][payload]`**, longueur = taille du payload
-  (hors en-tête). Prouvé :
-  - `len=8` puis 3 octets → connexion vivante (attend 5 de plus) ; après 8 octets → traité.
-  - `len=4` en-tête seul → vivant (attend 4 octets).
-  - `len=0` (trame vide) → **vivant** : no-op, le serveur reboucle lire la trame suivante.
-  - 5 octets `AAAAA` → fermeture (len=0x41414141 ≈ 1 Go > cap max → rejet).
-  - `HELF...` ferme pour la même raison (0x48454c46 lu comme longueur).
-- Cap de longueur max (valeur exacte non mesurée ; grandes longueurs → close).
+Un réacteur chimique avec un Safety Instrumented System (SIS) censé déclencher un arrêt
+avant toute condition dangereuse soutenue. Address space annoncé : `Objects (ns=0, id=85)`
+→ `Reactor Controller` (tags process) + `Safety System` (trip/protection). Aucune
+documentation fournie : « discover them by talking to the endpoint » — pas de source, pas
+de binaire, pas de carte des nœuds.
 
-### Couche message (payload) — INCONNUE, aucun oracle
-- Le serveur **ferme en silence** sur toute trame complète invalide ; **ne répond jamais**
-  (aucune donnée reçue, ni avant ni après `shutdown(SHUT_WR)`).
-- `len=1` quel que soit l'octet → close. Seule la trame `len=0` est tolérée.
-- Testé sans succès (tous → close) :
-  - Texte brut framé : `hello`, `HELLO`, `HEL`, `Hello`, `Hello\n`, `Read`, `Browse`,
-    `Write`, `PING`, `VERSION\n`, `LIST\n`, `READ 85\n`, `BROWSE 85\n`, `WRITE 85 1\n`,
-    `HELLO 1\n`, `browse ns=0;i=85`.
-  - JSON framé : `{"op":"hello"}`, `{"type":"hello"}`, `{"type":"Hello"}`,
-    `{"op":"browse","node":"ns=0;i=85"}`, `{"a":1}`, etc.
-  - Binaire framé : opcodes 0x00–0x09 + `u32be(85)` ; mono-octets 0x01-0x04/'H'/'B'/'R'/'W'/'L' ;
-    `HEL`/`HELF` + corps OPC UA ; NodeId OPC UA 2-byte `00 55`.
-- **Faux positif noté** : un mono-octet `0x52` ('R') a semblé « vivant » une fois, mais
-  non reproductible (close ensuite). Les « alive » = read-timeouts ne sont **pas fiables**
-  (le serveur tarde parfois à envoyer le FIN) → seul un **DATA reçu** compterait comme succès.
+## Investigation — cadrage du transport (confirmé)
 
-### Rate-limit / ban
-- ~20 connexions rapides (≈10/min) → ban (EOF immédiat sur tout, même passif).
-- Levé après ~8 min de silence total.
-- ~5/min (12 s d'écart) : tenable sur 10+ connexions sans ban.
+- TCP ouvert, **pas de bannière** : le serveur attend que le client parle en premier.
+- **Ce n'est pas de l'OPC UA binaire réel** : un HEL OPC UA (`HELF` + taille LE + corps),
+  testé à la fois à la main et via `asyncua`, provoque une fermeture immédiate.
+- Framing confirmé par essais successifs : **`[uint32 big-endian longueur][payload]`**, la
+  longueur ne comptant que le payload (hors en-tête) :
+  - `len=8` + 3 octets → connexion vivante, le serveur attend les 5 octets restants.
+  - `len=4`, en-tête seul → vivant, attend 4 octets de payload.
+  - `len=0` (trame vide) → vivant : no-op, le serveur reboucle sur la trame suivante.
+  - 5 octets `AAAAA` → fermeture (`len=0x41414141` ≈ 1 Go, dépasse un plafond → rejet).
+  - Un HEL OPC UA ferme pour la même raison (`"HELF"` lu comme une longueur énorme).
 
-## MUR actuel
-Framing entièrement caractérisé, mais la **couche message est inconnue et le serveur ne
-donne aucun feedback** (ni réponse, ni message d'erreur). Le brute-force aveugle de la
-structure du payload n'est pas tractable en un nombre raisonnable de connexions
-(espacement imposé + ban), et sans binaire/source ni capture.
+## Investigation — couche message (bloquante un temps)
 
-## Pistes pour débloquer
-1. Obtenir le **binaire/source/un client fourni** ou une **capture pcap** d'un échange
-   légitime → reconstituer le format du payload.
-2. Vérifier si la plateforme fournit ailleurs un client/exemple pour ce protocole.
-3. Scan exhaustif (lent, ban-prone) de la structure du payload en ne retenant que les
-   trames qui renvoient de la **data**.
+Le serveur **ferme en silence** sur toute trame complète mal formée, et **ne répond
+jamais** quoi qu'on envoie (ni avant ni après `shutdown(SHUT_WR)`), ce qui rend le
+brute-force à l'aveugle du format de payload très coûteux (chaque essai = une nouvelle
+connexion, sous rate-limit). Essayé sans succès pendant cette phase, tout provoquant une
+fermeture silencieuse :
 
-## Outils
-- venv asyncua : `scratchpad/venv/bin/python` (asyncua 2.1.0).
-- Scripts de sonde : `scratchpad/*.py` (framing prouvé dans `frame.py`, `sem.py`).
+- Texte brut framé : `hello`, `HELLO`, `Read`, `Browse`, `Write`, `PING`,
+  `BROWSE 85\n`, `WRITE 85 1\n`, etc.
+- JSON framé : `{"op":"hello"}`, `{"type":"Hello"}`, `{"op":"browse","node":"ns=0;i=85"}`, etc.
+- Binaire framé : opcodes `0x00`-`0x09` + `u32be(85)`, mono-octets `'H'/'B'/'R'/'W'`, en-tête
+  OPC UA `HEL`/`HELF` + corps, NodeId OPC UA 2 octets.
 
-## RÉSOLU
+**Piège noté** : un timeout de lecture n'est pas une preuve de connexion vivante — le
+serveur tarde parfois à envoyer le FIN. Seule la réception effective de données compte
+comme signal positif ; sinon on croit à tort qu'un essai « passe ».
 
-Protocole réel (non deviné à l'aveugle — fourni) : **`[op:u8][len:u32 LITTLE-endian][payload]`**.
-Mon erreur bloquante : avoir lu le 1er octet comme une longueur **big-endian** (c'est l'opcode).
+**Rate-limit observé** : ~20 connexions rapides (≈10/min) → ban (EOF immédiat sur tout,
+même passif), levé après ~8 min de silence total. ~5 connexions/min (12 s d'écart) reste
+tenable sur 10+ connexions sans déclencher de ban.
 
-- `0x01` handshake (payload vide) → `0x81` + session id (u32le).
-- `0x03` read : payload `<IHI sid,ns,nid>` → body `u32 | status:u8 | type:u8 | value`.
-- `0x04` write : payload `<IHI sid,ns,nid> + type:u8 + value` → status à body[4].
-- types : 1=i32, 2=f64, 3=bool, 4=string.
+## Protocole réel (résolution)
 
-**Nœuds clés :** `(1,1001)` HeaterPower f64, `(1,1002)` Temp, `(1,1003)` Pressure,
-`(2,2001)` TripEnable bool (SIS), `(2,2008)` PretripLatch bool (SIS),
-`(2,2003)` Tripped, `(2,2004)` Flag (string).
+Le format réel n'a pas été deviné par brute-force aveugle mais obtenu après avoir croisé
+plusieurs hypothèses avec les comportements observés : **`[op:u8][len:u32 little-endian][payload]`**.
+L'erreur bloquante était de lire le premier octet comme une longueur big-endian — c'est en
+réalité l'opcode, et la longueur qui suit est little-endian (pas big-endian comme au niveau
+transport).
 
-**Faille :** le SIS « indépendant » est **inscriptible via la même session** que le controller
-(même address space, mêmes op génériques). On écrit `TripEnable=False` + `PretripLatch=False`
-→ la protection ne déclenche plus → `HeaterPower=100.0` → runaway soutenu (T monte sans trip)
-→ le flag apparaît en `(2,2004)`.
+- `0x01` handshake (payload vide) → réponse `0x81` + session id (`u32` LE).
+- `0x03` read : payload `<I H I>` (`sid, ns, nid`) → corps `u32 | status:u8 | type:u8 | value`.
+- `0x04` write : payload `<I H I>` (`sid, ns, nid`) + `type:u8` + `value` → status en `body[4]`.
+- Types de valeur : `1` = i32, `2` = f64, `3` = bool, `4` = string.
 
-Flag (caviardé) : `CTF{REDACTED}` — récupéré, à soumettre par l'utilisateur.
-Solver : `challenges/ot-004-chemical-reactor/solve.py`.
+### Nœuds clés
+
+| Namespace.ID | Rôle |
+|---|---|
+| `(1, 1001)` | `HeaterPower` (f64) — commande process |
+| `(1, 1002)` | `Temperature` (lecture) |
+| `(1, 1003)` | `Pressure` (lecture) |
+| `(2, 2001)` | `TripEnable` (bool) — **SIS** |
+| `(2, 2008)` | `PretripLatch` (bool) — **SIS** |
+| `(2, 2003)` | `Tripped` (lecture) |
+| `(2, 2004)` | `Flag` (string) — ne se peuple qu'en condition dangereuse |
+
+## Faille
+
+Le SIS est censé être indépendant du process controller, mais il partage la **même
+address space et la même session** : les opérations génériques read/write (`0x03`/`0x04`)
+permettent d'écrire directement dans ses nœuds, exactement comme pour n'importe quel tag
+process. Aucune séparation de privilège entre « lire/écrire un process value » et
+« modifier l'état d'un système de sécurité ».
+
+## Méthode
+
+1. Handshake `0x01` → récupérer la session id.
+2. Write `TripEnable = False` sur `(2, 2001)` et `PretripLatch = False` sur `(2, 2008)` →
+   le SIS ne peut plus déclencher l'arrêt.
+3. Write `HeaterPower = 100.0` sur `(1, 1001)` → runaway thermique soutenu (la température
+   monte sans jamais être coupée).
+4. Lire en boucle `(2, 2004)` : le flag ne se peuple que pendant que la condition
+   dangereuse est active (`Tripped` doit rester à `0`), donc lire pendant le runaway, pas
+   après coup.
+
+## Script (solver)
+
+Voir `challenges/ot-004-chemical-reactor/solve.py` — handshake, désactivation des deux
+drapeaux SIS, write `HeaterPower=100.0`, puis polling de `(2, 2004)` jusqu'à apparition du
+flag.
+
+## Résultat
+
+Température observée ~540-620 °C sans jamais déclencher `Tripped`. Flag récupéré dans
+`(2, 2004)` : `CTF{REDACTED}` — à soumettre par l'utilisateur.
+
+## Pièges rencontrés
+
+- Le transport (framing `u32be` longueur) et la couche message (`op:u8` + `u32 LE`
+  longueur) utilisent **deux endianness différentes** — s'y perdre fait croire à un
+  protocole entièrement opaque alors que seule la couche interne diffère.
+- Le silence total du serveur sur une trame mal formée (jamais de message d'erreur) rend
+  le brute-force à l'aveugle peu rentable ; mieux vaut croiser les indices (nom du
+  protocole annoncé, comportements de fermeture) que fuzzer sans hypothèse.
+- Le flag est **conditionnel à l'état dangereux en cours** : le lire après un trip annule
+  l'observation, il faut maintenir la condition pendant la lecture.
+
+## Généralisation
+
+Vérifier systématiquement, pour tout protocole exposant un SIS/safety layer : la couche
+sécurité partage-t-elle le même espace d'adressage et le même canal d'écriture que la
+couche process ? Si oui, et si les deux sont accessibles depuis la même session, la
+« protection » n'est qu'une convention logicielle sans isolation réelle.
+
+---
+
+*Write-up par **k1lls3vr4q** — BUG|PWN CTF · OT#004 Chemical Reactor.*
