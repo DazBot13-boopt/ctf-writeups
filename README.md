@@ -2,7 +2,7 @@
 
 Write-ups des challenges du CTF **bugpwn** (`https://ctf.bugpwn.com`, plateforme battleCTF),
 organisés par catégorie. Les vrais flags sont **caviardés** (`CTF{REDACTED}`) — ils ont été
-soumis à la plateforme et ne figurent pas ici.
+soumis à la plateforme et ne figurent pas ici Pour éviter les partages de flag 
 
 ## Web
 - [SwiftNotes](web/swiftnotes.md) — prototype pollution → RCE EJS
